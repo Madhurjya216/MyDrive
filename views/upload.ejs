@@ -1,0 +1,391 @@
+<!-- views/upload.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .header h1 {
+            margin: 0;
+            color: #4285F4;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #4285F4;
+        }
+        .upload-area i {
+            font-size: 48px;
+            color: #4285F4;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .upload-text {
+            margin-bottom: 15px;
+            color: #666;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-preview {
+            margin-top: 20px;
+            display: none;
+        }
+        .file-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 4px;
+        }
+        .file-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+        .progress {
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #4285F4;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        .upload-btn {
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .upload-btn i {
+            margin-right: 8px;
+        }
+        .upload-btn:hover {
+            background-color: #3367d6;
+        }
+        .upload-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .error {
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+            color: #d32f2f;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .file-type-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #4285F4;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .file-size-warning {
+            color: #ff9800;
+            font-size: 13px;
+            margin-top: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Upload File</h1>
+            <a href="/dashboard" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to dashboard
+            </a>
+        </div>
+        
+        <% if (typeof error !== 'undefined') { %>
+            <div class="error">
+                <i class="fas fa-exclamation-circle"></i> <%= error %>
+            </div>
+        <% } %>
+
+        <form id="uploadForm" action="/document/upload" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Select a file to upload</label>
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <div class="upload-text">
+                        Drag and drop files here or click to browse
+                    </div>
+                    <div class="upload-text">
+                        Max file size: 16MB
+                    </div>
+                </div>
+                <input type="file" name="file" id="fileInput" class="file-input" required>
+                <div class="file-size-warning" id="fileSizeWarning">
+                    <i class="fas fa-exclamation-triangle"></i> Large files may take longer to upload
+                </div>
+            </div>
+            
+            <div class="file-preview" id="filePreview">
+                <div id="fileTypeIcon" class="file-type-icon">
+                    <i class="fas fa-file"></i>
+                </div>
+                <img id="previewImage" src="" alt="Preview" style="display: none;">
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="progress-text" id="progressText">Preparing upload...</div>
+            </div>
+            
+            <button type="submit" id="uploadBtn" class="upload-btn">
+                <i class="fas fa-upload"></i> Upload File
+            </button>
+        </form>
+    </div>
+    
+    <script>
+        // DOM elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const filePreview = document.getElementById('filePreview');
+        const fileTypeIcon = document.getElementById('fileTypeIcon');
+        const previewImage = document.getElementById('previewImage');
+        const fileInfo = document.getElementById('fileInfo');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const fileSizeWarning = document.getElementById('fileSizeWarning');
+        
+        // Click on upload area to trigger file input
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#4285F4';
+            uploadArea.style.backgroundColor = '#f1f8ff';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#ddd';
+            uploadArea.style.backgroundColor = 'transparent';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ddd';
+            uploadArea.style.backgroundColor = 'transparent';
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                handleFileSelect(file);
+            }
+        });
+        
+        function handleFileSelect(file) {
+            // Display file info
+            fileInfo.textContent = `${file.name} (${formatFileSize(file.size)})`;
+            filePreview.style.display = 'block';
+            
+            // Show warning for large files
+            if (file.size > 5 * 1024 * 1024) { // 5MB
+                fileSizeWarning.style.display = 'block';
+            } else {
+                fileSizeWarning.style.display = 'none';
+            }
+            
+            // Preview image if it's an image file
+            if (file.type.startsWith('image/')) {
+                previewImage.style.display = 'block';
+                fileTypeIcon.style.display = 'none';
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                previewImage.style.display = 'none';
+                fileTypeIcon.style.display = 'block';
+                
+                // Set appropriate icon based on file type
+                let iconClass = 'fa-file';
+                
+                if (file.type.startsWith('video/')) {
+                    iconClass = 'fa-file-video';
+                } else if (file.type.startsWith('audio/')) {
+                    iconClass = 'fa-file-audio';
+                } else if (file.type === 'application/pdf') {
+                    iconClass = 'fa-file-pdf';
+                } else if (file.type.includes('word')) {
+                    iconClass = 'fa-file-word';
+                } else if (file.type.includes('excel') || file.type.includes('spreadsheet')) {
+                    iconClass = 'fa-file-excel';
+                } else if (file.type === 'text/plain') {
+                    iconClass = 'fa-file-alt';
+                }
+                
+                fileTypeIcon.innerHTML = `<i class="fas ${iconClass}"></i>`;
+            }
+        }
+        
+        // Handle form submission with custom AJAX upload
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) {
+                return;
+            }
+            
+            // Show progress UI
+            progressContainer.style.display = 'block';
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+            
+            // Use FormData to prepare the upload
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Create and configure the AJAX request
+            const xhr = new XMLHttpRequest();
+            
+            // Handle progress events
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.textContent = `Uploading: ${percentComplete}%`;
+                    
+                    // For larger files, provide more detailed feedback
+                    if (file.size > 10 * 1024 * 1024) { // 10MB
+                        const uploaded = formatFileSize(e.loaded);
+                        const total = formatFileSize(e.total);
+                        progressText.textContent += ` (${uploaded} of ${total})`;
+                    }
+                }
+            });
+            
+            // Handle completion
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    progressText.textContent = 'Upload complete! Redirecting...';
+                    progressBar.style.width = '100%';
+                    window.location.href = '/dashboard';
+                } else {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        progressText.textContent = `Error: ${response.error || 'Upload failed'}`;
+                    } catch (e) {
+                        progressText.textContent = 'Upload failed. Please try again.';
+                    }
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Try Again';
+                }
+            });
+            
+            // Handle network errors
+            xhr.addEventListener('error', () => {
+                progressText.textContent = 'Network error. Please check your connection and try again.';
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Try Again';
+            });
+            
+            // Handle timeout
+            xhr.addEventListener('timeout', () => {
+                progressText.textContent = 'Upload timed out. Please try again with a smaller file.';
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Try Again';
+            });
+            
+            // Open and send the request
+            xhr.open('POST', '/document/upload', true);
+            xhr.timeout = 300000; // 5 minute timeout
+            xhr.send(formData);
+        });
+        
+        // Format file size for display
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+    </script>
+</body>
+</html>

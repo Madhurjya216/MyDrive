@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Verify Email Code</h3>
+                    </div>
+                    <div class="card-body">
+                        <% if (typeof error !== 'undefined') { %>
+                            <div class="alert alert-danger" role="alert">
+                                <%= error %>
+                            </div>
+                        <% } %>
+                        
+                        <div class="alert alert-info" role="alert">
+                            <p class="mb-0">We've sent a verification code to <strong><%= email %></strong></p>
+                            <p class="mb-0">Please check your email and enter the code below to complete login.</p>
+                        </div>
+                        
+                        <form action="/verify-otp" method="POST">
+                            <div class="mb-4">
+                                <label for="otp" class="form-label">Verification Code</label>
+                                <input type="text" class="form-control form-control-lg text-center" 
+                                       id="otp" name="otp" placeholder="Enter 6-digit code" 
+                                       inputmode="numeric" pattern="[0-9]*" maxlength="6" required
+                                       style="font-size: 24px; letter-spacing: 0.5em;">
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">Verify</button>
+                            </div>
+                        </form>
+                        
+                        <div class="mt-4 text-center">
+                            <form action="/resend-otp" method="POST">
+                                <p>Didn't receive the code? 
+                                    <button type="submit" class="btn btn-link p-0 align-baseline">Resend code</button>
+                                </p>
+                            </form>
+                            
+                            <p>
+                                <a href="/login" class="btn btn-outline-secondary btn-sm">Back to Login</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Having trouble?</h5>
+                        <ul class="mb-0">
+                            <li>Check your spam or junk folder</li>
+                            <li>Make sure your email address is correct</li>
+                            <li>Codes expire after 10 minutes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-focus on the input field
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('otp').focus();
+        });
+        
+        // Auto-submit when 6 digits are entered
+        document.getElementById('otp').addEventListener('input', function(e) {
+            if (e.target.value.length === 6 && /^\d{6}$/.test(e.target.value)) {
+                e.target.form.submit();
+            }
+        });
+    </script>
+</body>
+</html>
