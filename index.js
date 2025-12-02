@@ -11,7 +11,7 @@ const documentRoutes = require("./routes/documentRoutes");
 // Initialize Passport configuration
 require("./config/passport");
 
-const app = express();
+const app = express();;
 
 // Middleware to parse URL-encoded data (from forms)
 app.use(express.json({ limit: '50mb' }));
