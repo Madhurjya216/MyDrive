@@ -1,394 +1,614 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>View Document</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+     <link rel="icon" href="https://i.ibb.co/FL4fpDwF/1742348862365-781564657.png">
     <style>
-        :root {
-            --primary-color: #4a90e2;
-            --background-dark: #121212;
-            --card-background: #1e1e1e;
-            --text-primary: #e0e0e0;
-            --text-secondary: #a0a0a0;
-            --hover-color: #5ca6f0;
-        }
+      :root {
+        --primary-color: #4a90e2;
+        --background-dark: #121212;
+        --card-background: #1e1e1e;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --hover-color: #5ca6f0;
+      }
 
-        body {
-            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--background-dark);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
+      body {
+        font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--background-dark);
+        color: var(--text-primary);
+        line-height: 1.6;
+      }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #333;
-        }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #333;
+      }
 
-        .header h1 {
-            margin: 0;
-            color: var(--primary-color);
-            font-weight: 700;
-        }
+      .header h1 {
+        margin: 0;
+        color: var(--primary-color);
+        font-weight: 700;
+      }
 
-        .nav {
-            display: flex;
-            gap: 20px;
-        }
+      .nav {
+        display: flex;
+        gap: 20px;
+      }
 
-        .nav a {
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
+      .nav a {
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-weight: 500;
+        transition: color 0.3s ease;
+      }
 
-        .nav a:hover {
-            color: var(--primary-color);
-        }
+      .nav a:hover {
+        color: var(--primary-color);
+      }
 
-        .document-info {
-            background-color: var(--card-background);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #333;
-        }
+      .document-info {
+        background-color: var(--card-background);
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #333;
+      }
 
-        .document-info h2 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            word-break: break-all;
-            color: var(--text-primary);
-        }
+      .document-info h2 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        word-break: break-all;
+        color: var(--text-primary);
+      }
 
-        .document-details {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
+      .document-details {
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
 
-        .document-details span {
-            margin-right: 15px;
-        }
+      .document-details span {
+        margin-right: 15px;
+      }
 
-        .document-details i {
-            margin-right: 5px;
-            color: var(--primary-color);
-        }
+      .document-details i {
+        margin-right: 5px;
+        color: var(--primary-color);
+      }
 
-        .document-actions {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-        }
+      .document-actions {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+      }
 
-        .action-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            transition: background-color 0.3s ease;
-        }
+      .action-btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: background-color 0.3s ease;
+      }
 
-        .action-btn i {
-            margin-right: 8px;
-        }
+      .action-btn i {
+        margin-right: 8px;
+      }
 
-        .action-btn:hover {
-            background-color: var(--hover-color);
-        }
+      .action-btn:hover {
+        background-color: var(--hover-color);
+      }
 
-        .document-content {
-            background-color: var(--card-background);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.1);
-            padding: 20px;
-            text-align: center;
-            border: 1px solid #333;
-        }
+      .document-content {
+        background-color: var(--card-background);
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        text-align: center;
+        border: 1px solid #333;
+      }
 
-        .document-preview {
-            max-width: 100%;
-            max-height: 80vh;
-            border-radius: 8px;
-        }
+      .document-preview {
+        max-width: 100%;
+        max-height: 80vh;
+        border-radius: 8px;
+      }
 
-        .video-preview, .audio-preview {
-            width: 100%;
-            max-width: 800px;
-            border-radius: 8px;
-        }
+      .video-preview,
+      .audio-preview {
+        width: 100%;
+        max-width: 800px;
+        border-radius: 8px;
+      }
 
-        .pdf-preview {
-            width: 100%;
-            height: 80vh;
-            border-radius: 8px;
-        }
+      .pdf-preview {
+        width: 100%;
+        height: 80vh;
+        border-radius: 8px;
+      }
 
-        .text-preview {
-            white-space: pre-wrap;
-            text-align: left;
-            padding: 20px;
-            border: 1px solid #333;
-            border-radius: 8px;
-            background-color: var(--background-dark);
-            overflow-x: auto;
-            max-height: 80vh;
-            overflow-y: auto;
-            color: var(--text-primary);
-        }
+      .text-preview {
+        white-space: pre-wrap;
+        text-align: left;
+        padding: 20px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background-color: var(--background-dark);
+        overflow-x: auto;
+        max-height: 80vh;
+        overflow-y: auto;
+        color: var(--text-primary);
+      }
 
-        .unsupported-preview {
-            padding: 40px;
-            color: var(--text-secondary);
-            text-align: center;
-        }
+      .unsupported-preview {
+        padding: 40px;
+        color: var(--text-secondary);
+        text-align: center;
+      }
 
-        .unsupported-preview i {
-            font-size: 48px;
-            color: #444;
-            margin-bottom: 20px;
-        }
+      .unsupported-preview i {
+        font-size: 48px;
+        color: #444;
+        margin-bottom: 20px;
+      }
 
-        /* Share Modal Styles */
-        .share-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-        }
+      /* Share Modal Styles */
+      .share-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
 
-        .modal-content {
-            background-color: var(--card-background);
-            margin: 15% auto;
-            padding: 20px;
-            border-radius: 12px;
-            width: 80%;
-            max-width: 500px;
-            border: 1px solid #333;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
+      .modal-content {
+        background-color: var(--card-background);
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 12px;
+        width: 80%;
+        max-width: 500px;
+        border: 1px solid #333;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      }
 
-        .modal-content h2 {
-            color: var(--text-primary);
-            margin-top: 0;
-        }
+      .modal-content h2 {
+        color: var(--text-primary);
+        margin-top: 0;
+      }
 
-        .close {
-            color: var(--text-secondary);
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+      .close {
+        color: var(--text-secondary);
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
 
-        .close:hover {
-            color: var(--primary-color);
-        }
+      .close:hover {
+        color: var(--primary-color);
+      }
 
-        .share-form {
-            margin-top: 20px;
-        }
+      .share-form {
+        margin-top: 20px;
+      }
 
-        .share-form input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #333;
-            border-radius: 8px;
-            background-color: var(--background-dark);
-            color: var(--text-primary);
-        }
+      .share-form input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background-color: var(--background-dark);
+        color: var(--text-primary);
+      }
 
-        .share-form button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            transition: background-color 0.3s ease;
-        }
+      .share-form button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.3s ease;
+      }
 
-        .share-form button:hover {
-            background-color: var(--hover-color);
+      .share-form button:hover {
+        background-color: var(--hover-color);
+      }
+
+      /* ===== SHARE MODAL OVERLAY ===== */
+      .share-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.75); /* dim background */
+        backdrop-filter: blur(4px);
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Share Modal Overlay */
+      .share-modal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 9999; /* Always on top */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6); /* dark overlay */
+        backdrop-filter: blur(4px); /* premium touch */
+        overflow: auto;
+        animation: fadeIn 0.2s ease-out;
+      }
+
+      /* Modal Box */
+      .share-modal .modal-content {
+        background: #1e1e1e;
+        margin: 10% auto;
+        padding: 30px;
+        border-radius: 12px;
+        width: 400px;
+        max-width: 90%;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        animation: scaleIn 0.2s ease-out;
+      }
+
+      /* Close Button */
+      .share-modal .close {
+        color: #bbb;
+        float: right;
+        font-size: 24px;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+      .share-modal .close:hover {
+        color: #fff;
+      }
+
+      /* Modal form styling */
+      .share-form input[type="email"] {
+        width: 100%;
+        padding: 12px;
+        margin-top: 10px;
+        border-radius: 6px;
+        border: 1px solid #555;
+        background: #2a2a2a;
+        color: white;
+        font-size: 15px;
+      }
+      .share-form button {
+        margin-top: 15px;
+        width: 100%;
+        background: #4a90e2;
+        padding: 12px;
+        border: none;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s ease;
+      }
+      .share-form button:hover {
+        background: #5ca6f0;
+      }
+
+      /* Animation */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
         }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes scaleIn {
+        from {
+          transform: scale(0.8);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* ===== MODAL BOX ===== */
+      .share-modal .modal-content {
+        background: #1e1e1e;
+        padding: 30px;
+        width: 100%;
+        max-width: 400px;
+        border-radius: 12px;
+        border: 1px solid #333;
+        box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.3);
+        animation: pop-in 0.25s ease;
+      }
+
+      /* ===== ANIMATION ===== */
+      @keyframes pop-in {
+        from {
+          transform: scale(0.8);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* ===== CLOSE BUTTON ===== */
+      .share-modal .close {
+        float: right;
+        font-size: 24px;
+        cursor: pointer;
+        color: #aaa;
+        transition: color 0.3s;
+      }
+
+      .share-modal .close:hover {
+        color: var(--primary-color);
+      }
+
+      /* ===== TITLE ===== */
+      .share-modal h2 {
+        margin-top: 0;
+        font-size: 24px;
+        margin-bottom: 20px;
+        color: var(--primary-color);
+      }
+
+      /* ===== FORM ===== */
+      .share-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .share-form input[type="email"] {
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #444;
+        background: #121212;
+        color: #fff;
+        font-size: 16px;
+      }
+
+      .share-form button {
+        padding: 12px;
+        background: var(--primary-color);
+        color: #fff;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+
+      .share-form button:hover {
+        background: var(--hover-color);
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>View Document</h1>
-            <div class="nav">
-                <a href="/dashboard">Back to Dashboard</a>
-            </div>
+      <div class="header">
+        <h1>View Document</h1>
+        <div class="nav">
+          <a href="/dashboard">Back to Dashboard</a>
         </div>
-        
-        <div class="document-info">
-            <h2><%= document.originalname %></h2>
-            <div class="document-details">
-                <span><i class="far fa-calendar"></i> <%= new Date(document.createdAt).toLocaleDateString() %></span>
-                <span><i class="fas fa-database"></i> <%= (document.size / 1024).toFixed(1) %> KB</span>
-                <span><i class="far fa-file"></i> <%= document.mimetype %></span>
-            </div>
-            <div class="document-actions">
-                <a href="/document/download/<%= document._id %>" class="action-btn">
-                    <i class="fas fa-download"></i> Download
-                </a>
-                <% if (document.user.toString() === userId.toString()) { %>
-                    <button class="action-btn" onclick="openShareModal('<%= document._id %>')">
-                        <i class="fas fa-share-alt"></i> Share
-                    </button>
-                    <button class="action-btn" onclick="deleteDocument('<%= document._id %>')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                <% } %>
-            </div>
+      </div>
+
+      <div class="document-info">
+        <h2><%= document.originalname %></h2>
+        <div class="document-details">
+          <span
+            ><i class="far fa-calendar"></i> <%= new
+            Date(document.createdAt).toLocaleDateString() %></span
+          >
+          <span
+            ><i class="fas fa-database"></i> <%= (document.size /
+            1024).toFixed(1) %> KB</span
+          >
+          <span><i class="far fa-file"></i> <%= document.mimetype %></span>
         </div>
-        
-        <div class="document-content">
-            <% if (document.mimetype.startsWith('image/')) { %>
-                <img src="/document/raw/<%= document._id %>" class="document-preview" alt="<%= document.originalname %>">
-            <% } else if (document.mimetype.startsWith('video/')) { %>
-                <video controls class="video-preview">
-                    <source src="/document/raw/<%= document._id %>" type="<%= document.mimetype %>">
-                    Your browser does not support the video tag.
-                </video>
-            <% } else if (document.mimetype.startsWith('audio/')) { %>
-                <audio controls class="audio-preview">
-                    <source src="/document/raw/<%= document._id %>" type="<%= document.mimetype %>">
-                    Your browser does not support the audio tag.
-                </audio>
-            <% } else if (document.mimetype === 'application/pdf') { %>
-                <iframe src="/document/raw/<%= document._id %>" class="pdf-preview" frameborder="0"></iframe>
-            <% } else if (document.mimetype === 'text/plain') { %>
-                <div class="text-preview">
-                    <%= textContent %>
-                </div>
-            <% } else { %>
-                <div class="unsupported-preview">
-                    <i class="fas fa-file"></i>
-                    <h3>Preview not available</h3>
-                    <p>This file type cannot be previewed directly in the browser.</p>
-                    <a href="/document/download/<%= document._id %>" class="action-btn">
-                        <i class="fas fa-download"></i> Download to view
-                    </a>
-                </div>
-            <% } %>
+        <div class="document-actions">
+          <a href="/document/download/<%= document._id %>" class="action-btn">
+            <i class="fas fa-download"></i> Download
+          </a>
+          <% if (document.user.toString() === userId.toString()) { %>
+          <button
+            class="action-btn"
+            onclick="openShareModal('<%= document._id %>')"
+          >
+            <i class="fas fa-share-alt"></i> Share
+          </button>
+          <button
+            class="action-btn"
+            onclick="deleteDocument('<%= document._id %>')"
+          >
+            <i class="fas fa-trash"></i> Delete
+          </button>
+          <% } %>
         </div>
+      </div>
+
+      <div class="document-content">
+        <% if (document.mimetype.startsWith('image/')) { %>
+        <img
+          src="/document/raw/<%= document._id %>"
+          class="document-preview"
+          alt="<%= document.originalname %>"
+        />
+        <% } else if (document.mimetype.startsWith('video/')) { %>
+        <video controls class="video-preview">
+          <source
+            src="/document/raw/<%= document._id %>"
+            type="<%= document.mimetype %>"
+          />
+          Your browser does not support the video tag.
+        </video>
+        <% } else if (document.mimetype.startsWith('audio/')) { %>
+        <audio controls class="audio-preview">
+          <source
+            src="/document/raw/<%= document._id %>"
+            type="<%= document.mimetype %>"
+          />
+          Your browser does not support the audio tag.
+        </audio>
+        <% } else if (document.mimetype === 'application/pdf') { %>
+        <iframe
+          src="/document/raw/<%= document._id %>"
+          class="pdf-preview"
+          frameborder="0"
+        ></iframe>
+        <% } else if (document.mimetype === 'text/plain') { %>
+        <div class="text-preview"><%= textContent %></div>
+        <% } else { %>
+        <div class="unsupported-preview">
+          <i class="fas fa-file"></i>
+          <h3>Preview not available</h3>
+          <p>This file type cannot be previewed directly in the browser.</p>
+          <a href="/document/download/<%= document._id %>" class="action-btn">
+            <i class="fas fa-download"></i> Download to view
+          </a>
+        </div>
+        <% } %>
+      </div>
     </div>
-    
+
     <!-- Share Modal -->
     <div id="shareModal" class="share-modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Share Document</h2>
-            <form id="shareForm" class="share-form">
-                <input type="hidden" id="documentId" name="documentId">
-                <input type="email" id="shareEmail" name="email" placeholder="Enter email address" required>
-                <button type="submit">Share</button>
-            </form>
-        </div>
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Share Document</h2>
+        <form id="shareForm" class="share-form">
+          <input type="hidden" id="documentId" name="documentId" />
+          <input
+            type="email"
+            id="shareEmail"
+            name="email"
+            placeholder="Enter email address"
+            required
+          />
+          <button type="submit">Share</button>
+        </form>
+      </div>
     </div>
-    
+
     <script>
-        // Modal functionality
-        const modal = document.getElementById('shareModal');
-        const closeBtn = document.querySelector('.close');
-        
-        function openShareModal(documentId) {
-            document.getElementById('documentId').value = documentId;
-            modal.style.display = 'block';
+      // SHARE MODAL
+      const modal = document.getElementById("shareModal");
+      const closeBtn = document.querySelector(".close");
+
+      function openShareModal(documentId) {
+        document.getElementById("documentId").value = documentId;
+        modal.style.display = "block";
+
+        // close any dropdowns
+        document
+          .querySelectorAll(".dropdown")
+          .forEach((d) => d.classList.remove("active"));
+      }
+
+      closeBtn.onclick = () => {
+        modal.style.display = "none";
+      };
+
+      window.onclick = (event) => {
+        if (event.target === modal) {
+          modal.style.display = "none";
         }
-        
-        closeBtn.onclick = function() {
-            modal.style.display = 'none';
-        }
-        
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = 'none';
+      };
+
+      // Share form submission
+      document
+        .getElementById("shareForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const documentId = document.getElementById("documentId").value;
+          const email = document.getElementById("shareEmail").value;
+
+          try {
+            const response = await fetch(`/document/share/${documentId}`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              alert("Document shared successfully!");
+              modal.style.display = "none";
+            } else {
+              alert(data.error || "Failed to share document");
             }
-        }
-        
-        // Share form submission
-        document.getElementById('shareForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const documentId = document.getElementById('documentId').value;
-            const email = document.getElementById('shareEmail').value;
-            
-            try {
-                const response = await fetch(`/document/share/${documentId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email }),
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('Document shared successfully!');
-                    modal.style.display = 'none';
-                } else {
-                    alert(data.error || 'Failed to share document');
-                }
-            } catch (error) {
-                console.error('Error sharing document:', error);
-                alert('Failed to share document');
-            }
+          } catch (error) {
+            console.error("Error sharing document:", error);
+            alert("Failed to share document");
+          }
         });
-        
-        // Delete document
-        async function deleteDocument(documentId) {
-            if (confirm('Are you sure you want to delete this document?')) {
-                try {
-                    const response = await fetch(`/document/delete/${documentId}`, {
-                        method: 'DELETE',
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        alert('Document deleted successfully!');
-                        window.location.href = '/dashboard';
-                    } else {
-                        alert(data.error || 'Failed to delete document');
-                    }
-                } catch (error) {
-                    console.error('Error deleting document:', error);
-                    alert('Failed to delete document');
-                }
+
+      // Delete document
+      async function deleteDocument(documentId) {
+        if (confirm("Are you sure you want to delete this document?")) {
+          try {
+            const response = await fetch(`/document/delete/${documentId}`, {
+              method: "DELETE",
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              alert("Document deleted successfully!");
+              window.location.href = "/dashboard";
+            } else {
+              alert(data.error || "Failed to delete document");
             }
+          } catch (error) {
+            console.error("Error deleting document:", error);
+            alert("Failed to delete document");
+          }
         }
+      }
     </script>
-</body>
+  </body>
 </html>

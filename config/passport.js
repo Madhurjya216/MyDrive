@@ -162,4 +162,16 @@ exports.registerUser = async (name, email, password) => {
   }
 };
 
-module.exports = exports;
+// Middleware to protect routes - ensure user is authenticated
+exports.isAuthenticated = function (req, res, next) {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
+  }
+  // If AJAX request, send 401; otherwise redirect to login
+  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return res.redirect('/login');
+};
+
+module.exports = exports; 

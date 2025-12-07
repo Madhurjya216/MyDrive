@@ -4,337 +4,264 @@ const router = express.Router();
 const multer = require("multer");
 const Document = require("../models/document");
 const User = require("../models/user");
+const { isAuthenticated } = require("../config/passport");
 
-// Update multer configuration with limits
+// Multer - keep files in memory
 const storage = multer.memoryStorage();
-
-// File filter function
-const fileFilter = (req, file, cb) => {
-  // Accept images, videos, audio, PDFs, and docs
-  const allowedMimeTypes = [
-    // Images
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    // Videos
-    "video/mp4",
-    "video/webm",
-    "video/ogg",
-    // Audio
-    "audio/mpeg",
-    "audio/ogg",
-    "audio/wav",
-    // Documents
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/plain",
-  ];
-
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Invalid file type. Please upload images, videos, audio files, PDFs, or documents."
-      ),
-      false
-    );
-  }
-};
-
-// Configure multer with optimized settings
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    fieldSize: 50 * 1024 * 1024, // For form fields
+    fileSize: 16 * 1024 * 1024, // 16MB per file
+    files: 20,
   },
 });
-// Authentication middleware (unchanged)
-const isAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.redirect("/login");
-};
 
-// Route for file upload form (unchanged)
+// Helper - respond consistently for AJAX and normal requests
+function respondJSONorRedirect(req, res, options = {}) {
+  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf("json") > -1)) {
+    return res.json(options);
+  }
+  if (options.redirect) return res.redirect(options.redirect);
+  if (options.render && options.data) return res.render(options.render, options.data);
+  return res.json(options);
+}
+
+// Render upload page
 router.get("/upload", isAuthenticated, (req, res) => {
   res.render("upload", { error: null });
 });
 
-// Handle file upload - updated to store file in DB
+// POST /document/upload - accept multiple files
 router.post(
   "/upload",
   isAuthenticated,
-  upload.single("file"),
+  upload.any(),
   async (req, res) => {
     try {
-      if (!req.file) {
-        return res
-          .status(400)
-          .render("upload", { error: "Please select a file to upload" });
-      }
+      const files = req.files || [];
 
-      // Check file size before processing
-      if (req.file.size > 16 * 1024 * 1024) {
-        // 16MB is MongoDB document limit
-        // For files larger than 16MB, we should use GridFS, but for now, reject
-        return res.status(400).render("upload", {
-          error: "File too large. Please upload files smaller than 16MB.",
+      if (!files.length) {
+        return respondJSONorRedirect(req, res, {
+          success: false,
+          error: "Please select at least one file to upload",
+          redirect: "/document/upload",
         });
       }
 
-      // Create a unique filename with timestamp and random number
-      const uniqueFilename =
-        Date.now() +
-        "-" +
-        Math.round(Math.random() * 1e9) +
-        "-" +
-        req.file.originalname;
+      const visibility = (req.body.visibility || "private").toString().toLowerCase();
+      const isPublicFlag = visibility === "public";
 
-      // Create new document with optimized fields
-      const newDocument = new Document({
-        filename: uniqueFilename,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        data: req.file.buffer,
-        user: req.user._id,
+      if (files.length > 20) {
+        return respondJSONorRedirect(req, res, {
+          success: false,
+          error: "Too many files. Please upload at most 20 files at once.",
+          redirect: "/document/upload",
+        });
+      }
+
+      const saves = files.map((file) => {
+        const uniqueFilename =
+          Date.now() + "-" + Math.round(Math.random() * 1e9) + "-" + file.originalname;
+
+        const doc = new Document({
+          filename: uniqueFilename,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          data: file.buffer,
+          user: req.user._id,
+          isPublic: isPublicFlag,
+        });
+
+        return doc.save();
       });
 
-      // Save with timeout increase
-      await newDocument.save({ timeout: 60000 }); // 60 second timeout
+      await Promise.all(saves);
 
-      // Redirect to dashboard on success
-      return res.redirect("/dashboard");
+      return respondJSONorRedirect(req, res, {
+        success: true,
+        redirect: "/dashboard",
+      });
     } catch (error) {
       console.error("Upload error:", error);
-      // Return detailed error for debugging
-      return res.status(500).render("upload", {
-        error: `Upload failed: ${error.message || "Unknown error"}`,
+      return respondJSONorRedirect(req, res, {
+        success: false,
+        error: error.message || "Upload failed",
+        redirect: "/document/upload",
       });
     }
   }
 );
 
-// Get all documents for the current user (unchanged)
-router.get("/my-documents", isAuthenticated, async (req, res) => {
+// GET /document/raw/:id - serve raw file
+router.get("/raw/:id", isAuthenticated, async (req, res) => {
   try {
-    const documents = await Document.find({ user: req.user._id });
-    res.render("my-documents", { documents });
-  } catch (error) {
-    console.error("Error fetching documents:", error);
-    res.status(500).send("Server error");
-  }
-});
+    // OPTIMIZATION: First query - check access without loading data (fast)
+    const docMeta = await Document.findById(req.params.id)
+      .select("user isPublic sharedWith mimetype")
+      .populate("user", "_id")
+      .lean();
+      
+    if (!docMeta) return res.status(404).send("Not found");
 
-// Get documents shared with the current user (unchanged)
-router.get("/shared-with-me", isAuthenticated, async (req, res) => {
-  try {
-    const documents = await Document.find({
-      sharedWith: req.user._id,
-    }).populate("user", "name email");
-    res.render("shared-documents", { documents });
-  } catch (error) {
-    console.error("Error fetching shared documents:", error);
-    res.status(500).send("Server error");
-  }
-});
-
-// Download a document - updated to stream from DB
-router.get("/download/:id", isAuthenticated, async (req, res) => {
-  try {
-    const document = await Document.findById(req.params.id);
-
-    // Check if document exists
-    if (!document) {
-      return res.status(404).send("Document not found");
+    // Access control
+    const isOwner = docMeta.user._id.toString() === req.user._id.toString();
+    const isShared = docMeta.sharedWith.some((s) => s.toString() === req.user._id.toString());
+    
+    if (!docMeta.isPublic && !isOwner && !isShared) {
+      return res.status(403).send("Forbidden");
     }
 
-    // Check if user has access to the document
-    if (
-      document.user.toString() !== req.user._id.toString() &&
-      !document.sharedWith.includes(req.user._id) &&
-      !document.isPublic
-    ) {
-      return res.status(403).send("Access denied");
+    // OPTIMIZATION: Second query - load only data field (only if authorized)
+    const doc = await Document.findById(req.params.id).select("data").lean();
+    
+    if (!doc || !doc.data) {
+      return res.status(404).send("File data not found");
     }
 
-    // Set headers for file download
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${document.originalname}"`
-    );
-    res.setHeader("Content-Type", document.mimetype);
-
-    // Send the file data from the database
-    res.send(document.data);
+    // Set caching headers to reduce repeated requests
+    res.set({
+      "Content-Type": docMeta.mimetype,
+      "Cache-Control": "public, max-age=86400", // Cache for 1 day
+      "ETag": req.params.id,
+    });
+    
+    return res.send(doc.data.buffer);
   } catch (error) {
-    console.error("Download error:", error);
-    res.status(500).send("Server error");
+    console.error("Raw serve error:", error);
+    return res.status(500).send("Server error");
   }
 });
 
-// View a document - updated to handle text content from DB
+// GET /document/view/:id - detail view
 router.get("/view/:id", isAuthenticated, async (req, res) => {
   try {
-    const document = await Document.findById(req.params.id);
+    // OPTIMIZATION: Don't load data field for view page
+    const doc = await Document.findById(req.params.id)
+      .select("-data")
+      .populate("user", "name email")
+      .lean();
+      
+    if (!doc) return res.status(404).send("Not found");
 
-    // Check if document exists
-    if (!document) {
-      return res.status(404).send("Document not found");
+    const isOwner = doc.user._id.toString() === req.user._id.toString();
+    const isShared = doc.sharedWith.some((s) => s.toString() === req.user._id.toString());
+    
+    if (!doc.isPublic && !isOwner && !isShared) {
+      return res.status(403).send("Forbidden");
     }
 
-    // Check if user has access to the document
-    if (
-      document.user.toString() !== req.user._id.toString() &&
-      !document.sharedWith.includes(req.user._id) &&
-      !document.isPublic
-    ) {
-      return res.status(403).send("Access denied");
-    }
-
-    // For text files, get the content from buffer
-    let textContent = "";
-    if (document.mimetype === "text/plain") {
-      textContent = document.data.toString("utf8");
-    }
-
-    // Pass both document and userId to the template
-    res.render("view-document", {
-      document,
+    // FIXED: Changed from "documentView" to "view-document" to match your file name
+    return res.render("view-document", { 
+      document: doc, 
       userId: req.user._id,
-      textContent,
+      user: req.user 
     });
   } catch (error) {
     console.error("View error:", error);
-    res.status(500).send("Server error");
+    return res.status(500).send("Server error");
   }
 });
 
-// Delete a document - updated for DB storage
-router.delete("/delete/:id", isAuthenticated, async (req, res) => {
+// GET /document/download/:id
+router.get("/download/:id", isAuthenticated, async (req, res) => {
   try {
-    const document = await Document.findById(req.params.id);
+    // OPTIMIZATION: Check access first without loading data
+    const docMeta = await Document.findById(req.params.id)
+      .select("user isPublic sharedWith originalname mimetype")
+      .populate("user", "_id")
+      .lean();
+      
+    if (!docMeta) return res.status(404).send("Not found");
 
-    // Check if document exists
-    if (!document) {
-      return res.status(404).json({ error: "Document not found" });
+    const isOwner = docMeta.user._id.toString() === req.user._id.toString();
+    const isShared = docMeta.sharedWith.some((s) => s.toString() === req.user._id.toString());
+    
+    if (!docMeta.isPublic && !isOwner && !isShared) {
+      return res.status(403).send("Forbidden");
     }
 
-    // Check if user owns the document
-    if (document.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "Access denied" });
+    // Now load data
+    const doc = await Document.findById(req.params.id).select("data").lean();
+    
+    if (!doc || !doc.data) {
+      return res.status(404).send("File data not found");
     }
 
-    // Delete the document from database
-    await Document.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+    res.set({
+      "Content-Type": docMeta.mimetype,
+      "Content-Disposition": `attachment; filename="${docMeta.originalname}"`,
+    });
+    
+    return res.send(doc.data.buffer);
   } catch (error) {
-    console.error("Delete error:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error("Download error:", error);
+    return res.status(500).send("Server error");
   }
 });
 
-// Share a document (unchanged)
+// POST /document/toggle-public/:id
+router.post("/toggle-public/:id", isAuthenticated, async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id).select("user isPublic");
+    if (!doc) return res.status(404).json({ success: false, error: "Document not found" });
+
+    if (doc.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: "Not authorized" });
+    }
+
+    doc.isPublic = !doc.isPublic;
+    await doc.save();
+    return res.json({ success: true, isPublic: doc.isPublic });
+  } catch (error) {
+    console.error("Toggle error:", error);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// POST /document/share/:id
 router.post("/share/:id", isAuthenticated, async (req, res) => {
   try {
     const { email } = req.body;
-    const document = await Document.findById(req.params.id);
+    if (!email) return res.json({ success: false, error: "Email is required" });
 
-    // Check if document exists
-    if (!document) {
-      return res.status(404).json({ error: "Document not found" });
+    const doc = await Document.findById(req.params.id).select("user sharedWith");
+    if (!doc) return res.json({ success: false, error: "Document not found" });
+
+    if (doc.user.toString() !== req.user._id.toString()) {
+      return res.json({ success: false, error: "Not authorized" });
     }
 
-    // Check if user owns the document
-    if (document.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "Access denied" });
+    const targetUser = await User.findOne({ email: email.toString().trim().toLowerCase() });
+    if (!targetUser) return res.json({ success: false, error: "Target user not found" });
+
+    if (!doc.sharedWith.some((id) => id.toString() === targetUser._id.toString())) {
+      doc.sharedWith.push(targetUser._id);
+      await doc.save();
     }
 
-    // Find user to share with
-    const userToShare = await User.findOne({ email });
-    if (!userToShare) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Check if document is already shared with this user
-    if (document.sharedWith.includes(userToShare._id)) {
-      return res
-        .status(400)
-        .json({ error: "Document already shared with this user" });
-    }
-
-    // Add user to sharedWith array
-    document.sharedWith.push(userToShare._id);
-    await document.save();
-
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (error) {
     console.error("Share error:", error);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
-// Toggle public access (unchanged)
-router.post("/toggle-public/:id", isAuthenticated, async (req, res) => {
+// DELETE /document/delete/:id
+router.delete("/delete/:id", isAuthenticated, async (req, res) => {
   try {
-    const document = await Document.findById(req.params.id);
+    const doc = await Document.findById(req.params.id).select("user");
+    if (!doc) return res.status(404).json({ success: false, error: "Document not found" });
 
-    // Check if document exists
-    if (!document) {
-      return res.status(404).json({ error: "Document not found" });
+    if (doc.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: "Not authorized" });
     }
 
-    // Check if user owns the document
-    if (document.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "Access denied" });
-    }
-
-    // Toggle isPublic flag
-    document.isPublic = !document.isPublic;
-    await document.save();
-
-    res.json({ success: true, isPublic: document.isPublic });
+    await doc.deleteOne();
+    return res.json({ success: true });
   } catch (error) {
-    console.error("Toggle public error:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// Raw document view - updated to serve from DB
-router.get("/raw/:id", isAuthenticated, async (req, res) => {
-  try {
-    const document = await Document.findById(req.params.id);
-
-    // Check if document exists
-    if (!document) {
-      return res.status(404).send("Document not found");
-    }
-
-    // Check if user has access to the document
-    if (
-      document.user.toString() !== req.user._id.toString() &&
-      !document.sharedWith.includes(req.user._id) &&
-      !document.isPublic
-    ) {
-      return res.status(403).send("Access denied");
-    }
-
-    // Set content type
-    res.setHeader("Content-Type", document.mimetype);
-
-    // Send the file data directly from database
-    res.send(document.data);
-  } catch (error) {
-    console.error("Error serving raw file:", error);
-    res.status(500).send("Server error");
+    console.error("Delete error:", error);
+    return res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
