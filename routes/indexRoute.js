@@ -8,12 +8,20 @@ const { isAuthenticated } = require("../config/passport");
 
 // Login form page
 router.get("/login", (req, res) => {
-  res.render("login");
+  // If already logged in, redirect to dashboard
+  if (req.isAuthenticated()) {
+    return res.redirect("/dashboard");
+  }
+  res.render("login", { error: null });
 });
 
 // Register form page
 router.get("/", (req, res) => {
-  res.render("register");
+  // If already logged in, redirect to dashboard
+  if (req.isAuthenticated()) {
+    return res.redirect("/dashboard");
+  }
+  res.render("register", { error: null });
 });
 
 router.get("/home", (req, res) => {
@@ -32,32 +40,71 @@ router.post("/", async (req, res) => {
 
     req.session.email = email;
     await generateAndSendOTP(email);
-    res.redirect("/verify-otp");
+    
+    // IMPORTANT: Save session before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).render("register", { error: "Session error" });
+      }
+      res.redirect("/verify-otp");
+    });
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).render("register", { error: "Server error" });
   }
 });
 
-// Handle login
+// Handle login - FIXED VERSION
 router.post("/login", (req, res, next) => {
   passport.authenticate("local", (err, user, info) => {
-    if (err) return next(err);
+    if (err) {
+      console.error("Login error:", err);
+      return next(err);
+    }
+
     if (!user) {
       return res.render("login", {
         error: info.message || "Invalid credentials",
       });
     }
 
+    // Check if user is verified
     if (!user.isVerified) {
       req.session.email = user.email;
       generateAndSendOTP(user.email);
-      return res.redirect("/verify-otp");
+      
+      // Save session before redirect
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return next(err);
+        }
+        return res.redirect("/verify-otp");
+      });
+      return;
     }
 
+    // CRITICAL: Log the user in with Passport
     req.login(user, (err) => {
-      if (err) return next(err);
-      return res.redirect("/dashboard");
+      if (err) {
+        console.error("req.login error:", err);
+        return next(err);
+      }
+
+      // IMPORTANT: Save session after login
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error after login:", err);
+          return next(err);
+        }
+        
+        console.log("✅ Login successful, redirecting to dashboard");
+        console.log("User ID:", user._id);
+        console.log("Session ID:", req.sessionID);
+        
+        return res.redirect("/dashboard");
+      });
     });
   })(req, res, next);
 });
@@ -67,7 +114,7 @@ router.get("/verify-otp", (req, res) => {
   if (!req.session.email) {
     return res.redirect("/login");
   }
-  res.render("verify-otp", { email: req.session.email });
+  res.render("verify-otp", { email: req.session.email, error: null });
 });
 
 // Handle OTP verification
@@ -80,6 +127,7 @@ router.post("/verify-otp", (req, res, next) => {
 
   passport.authenticate("otp-verify", (err, user, info) => {
     if (err) return next(err);
+    
     if (!user) {
       return res.render("verify-otp", {
         email: req.session.email,
@@ -93,8 +141,14 @@ router.post("/verify-otp", (req, res, next) => {
       .then(() => {
         req.login(user, (err) => {
           if (err) return next(err);
+          
           delete req.session.email;
-          return res.redirect("/dashboard");
+          
+          // Save session after login
+          req.session.save((err) => {
+            if (err) return next(err);
+            return res.redirect("/dashboard");
+          });
         });
       })
       .catch((err) => {
@@ -122,16 +176,16 @@ router.post("/resend-otp", async (req, res, next) => {
   }
 });
 
-// OPTIMIZED DASHBOARD - CRITICAL: Must exclude 'data' field!
+// DASHBOARD - MUST CHECK AUTHENTICATION
 router.get("/dashboard", isAuthenticated, async (req, res) => {
   try {
+    console.log("📊 Dashboard accessed by user:", req.user._id);
+    
     const limit = 50;
 
-    // IMPORTANT: Use .select("-data") to exclude binary data
-    // This makes the dashboard load 100x faster
     const [myDocuments, sharedDocuments, publicDocuments] = await Promise.all([
       Document.find({ user: req.user._id })
-        .select("-data") // DON'T load file content
+        .select("-data")
         .sort({ createdAt: -1 })
         .limit(limit)
         .lean(),
@@ -163,14 +217,13 @@ router.get("/dashboard", isAuthenticated, async (req, res) => {
   }
 });
 
-// OPTIMIZED: Serve raw files with two-stage loading
+// Serve raw files
 router.get("/document/raw/:id", async (req, res) => {
   if (!req.isAuthenticated()) {
-    return res.redirect("/");
+    return res.redirect("/login");
   }
   
   try {
-    // Stage 1: Check access WITHOUT loading data (fast)
     const docMeta = await Document.findById(req.params.id)
       .select("user isPublic sharedWith mimetype")
       .lean();
@@ -179,7 +232,6 @@ router.get("/document/raw/:id", async (req, res) => {
       return res.status(404).send("Document not found");
     }
 
-    // Access control
     const userId = req.user._id.toString();
     const isOwner = docMeta.user.toString() === userId;
     const isShared = docMeta.sharedWith.some(id => id.toString() === userId);
@@ -188,19 +240,16 @@ router.get("/document/raw/:id", async (req, res) => {
       return res.status(403).send("Access denied");
     }
 
-    // Stage 2: Load ONLY the data field (only if authorized)
     const doc = await Document.findById(req.params.id).select("data").lean();
     
     if (!doc || !doc.data) {
       return res.status(404).send("File data not found");
     }
 
-    // Set headers with caching
     res.setHeader("Content-Type", docMeta.mimetype);
-    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache 1 day
+    res.setHeader("Cache-Control", "public, max-age=86400");
     res.setHeader("ETag", req.params.id);
 
-    // Send the buffer
     res.send(doc.data.buffer);
   } catch (error) {
     console.error("Error serving raw file:", error);
@@ -214,7 +263,10 @@ router.get("/document/raw/:id", async (req, res) => {
 router.get("/logout", (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
-    req.session.destroy(() => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destroy error:", err);
+      }
       res.redirect("/login");
     });
   });

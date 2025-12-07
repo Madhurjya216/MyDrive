@@ -1,177 +1,182 @@
 // config/passport.js
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const User = require('../models/user');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
+const User = require("../models/user");
+const bcrypt = require("bcrypt");
+const nodemailer = require("nodemailer");
 
-// Create email transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // Or whatever email service you use
-  auth: {
-    user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
-
-// Serialize user to session
+// CRITICAL: Serialize user - saves user ID to session
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  console.log("✅ Serializing user:", user._id);
+  done(null, user._id);
 });
 
-// Deserialize user from session
+// CRITICAL: Deserialize user - retrieves user from database
 passport.deserializeUser(async (id, done) => {
   try {
+    console.log("🔍 Deserializing user ID:", id);
     const user = await User.findById(id);
+    if (!user) {
+      console.log("❌ User not found during deserialization");
+      return done(null, false);
+    }
+    console.log("✅ User deserialized:", user.email);
     done(null, user);
-  } catch (err) {
-    done(err, null);
+  } catch (error) {
+    console.error("❌ Deserialization error:", error);
+    done(error, null);
   }
 });
 
-// Configure local strategy for authentication
-passport.use('local', new LocalStrategy(
-  { usernameField: 'email' },
-  async (email, password, done) => {
-    try {
-      // Find user by email
-      const user = await User.findOne({ email });
-      
-      // If user doesn't exist or password doesn't match
-      if (!user || !(await user.validatePassword(password))) {
-        return done(null, false, { message: 'Invalid email or password' });
+// Local Strategy for login
+passport.use(
+  new LocalStrategy(
+    {
+      usernameField: "email",
+      passwordField: "password",
+    },
+    async (email, password, done) => {
+      try {
+        console.log("🔐 Login attempt for:", email);
+        
+        const user = await User.findOne({ email: email.toLowerCase() });
+        
+        if (!user) {
+          console.log("❌ User not found:", email);
+          return done(null, false, { message: "Invalid email or password" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        
+        if (!isMatch) {
+          console.log("❌ Invalid password for:", email);
+          return done(null, false, { message: "Invalid email or password" });
+        }
+
+        console.log("✅ Login successful for:", email);
+        return done(null, user);
+      } catch (error) {
+        console.error("❌ Login error:", error);
+        return done(error);
       }
-      
-      return done(null, user);
-    } catch (err) {
-      return done(err);
     }
-  }
-));
+  )
+);
 
-// Configure OTP verification strategy
-passport.use('otp-verify', new LocalStrategy(
-  {
-    usernameField: 'email',
-    passwordField: 'otp'
-  },
-  async (email, otp, done) => {
-    try {
-      // Find user by email
-      const user = await User.findOne({ email });
-      
-      // Check if user exists and OTP is valid
-      if (!user) {
-        return done(null, false, { message: 'User not found' });
+// OTP Strategy
+passport.use(
+  "otp-verify",
+  new LocalStrategy(
+    {
+      usernameField: "email",
+      passwordField: "otp",
+    },
+    async (email, otp, done) => {
+      try {
+        const user = await User.findOne({ email: email.toLowerCase() });
+
+        if (!user) {
+          return done(null, false, { message: "User not found" });
+        }
+
+        if (!user.otp || user.otp !== otp) {
+          return done(null, false, { message: "Invalid OTP" });
+        }
+
+        if (user.otpExpiry < Date.now()) {
+          return done(null, false, { message: "OTP has expired" });
+        }
+
+        // Clear OTP after successful verification
+        user.otp = undefined;
+        user.otpExpiry = undefined;
+        await user.save();
+
+        return done(null, user);
+      } catch (error) {
+        return done(error);
       }
-      
-      // Check if OTP is correct and not expired
-      const currentTime = new Date();
-      if (user.otp !== otp || currentTime > user.otpExpiry) {
-        return done(null, false, { message: 'Invalid or expired OTP' });
-      }
-      
-      // Clear OTP data after successful verification
-      user.otp = undefined;
-      user.otpExpiry = undefined;
-      
-      return done(null, user);
-    } catch (err) {
-      return done(err);
     }
-  }
-));
+  )
+);
 
-// Helper function to generate 6-digit OTP
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// Helper function to send OTP via email
-async function sendOTPEmail(email, otp) {
-  const mailOptions = {
-    from: process.env.EMAIL_USERNAME,
-    to: email,
-    subject: 'Your Email Verification Code',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-        <h2 style="color: #333;">Verify Your Email</h2>
-        <p>Please use the following code to verify your email address:</p>
-        <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold;">
-          ${otp}
-        </div>
-        <p style="margin-top: 20px;">This code will expire in 10 minutes.</p>
-        <p>If you didn't create an account, please ignore this email.</p>
-      </div>
-    `
-  };
-
-  return transporter.sendMail(mailOptions);
-}
-
-// Generate and send OTP to a user
-exports.generateAndSendOTP = async (email) => {
-  try {
-    // Find user by email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return { error: 'User not found' };
-    }
-    
-    // Generate OTP and save to user
-    const otp = generateOTP();
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); // OTP valid for 10 minutes
-    
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    await user.save();
-    
-    // Send OTP via email
-    await sendOTPEmail(user.email, otp);
-    
-    return { success: true };
-  } catch (err) {
-    console.error('Error generating or sending OTP:', err);
-    return { error: 'Failed to send verification code' };
-  }
-};
-
-// Helper function to register a new user
-exports.registerUser = async (name, email, password) => {
-  try {
-    // Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) {
-      return { error: 'User already exists' };
-    }
-    
-    // Create new user
-    user = new User({
-      name,
-      email,
-      password, // Password will be hashed in the pre-save hook in the User model
-      isVerified: false
-    });
-    
-    await user.save();
-    return { user };
-  } catch (err) {
-    console.error(err);
-    return { error: 'Server error' };
-  }
-};
-
-// Middleware to protect routes - ensure user is authenticated
-exports.isAuthenticated = function (req, res, next) {
-  if (req.isAuthenticated && req.isAuthenticated()) {
+// CRITICAL: Middleware to check if user is authenticated
+function isAuthenticated(req, res, next) {
+  console.log("🔒 Checking authentication...");
+  console.log("Session ID:", req.sessionID);
+  console.log("Is Authenticated?", req.isAuthenticated());
+  console.log("User:", req.user ? req.user.email : "None");
+  
+  if (req.isAuthenticated()) {
+    console.log("✅ User is authenticated");
     return next();
   }
-  // If AJAX request, send 401; otherwise redirect to login
-  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('json') > -1)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  return res.redirect('/login');
-};
+  
+  console.log("❌ User not authenticated, redirecting to login");
+  return res.redirect("/login");
+}
 
-module.exports = exports; 
+// Register user function
+async function registerUser(name, email, password) {
+  try {
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    
+    if (existingUser) {
+      return { error: "User already exists" };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      isVerified: false,
+    });
+
+    await newUser.save();
+    return { success: true };
+  } catch (error) {
+    console.error("Registration error:", error);
+    return { error: "Registration failed" };
+  }
+}
+
+// Generate and send OTP
+async function generateAndSendOTP(email) {
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await User.updateOne(
+      { email: email.toLowerCase() },
+      { otp, otpExpiry }
+    );
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Your OTP Code",
+      text: `Your OTP code is: ${otp}. It will expire in 10 minutes.`,
+    });
+
+    console.log("✅ OTP sent to:", email);
+  } catch (error) {
+    console.error("❌ OTP generation error:", error);
+    throw error;
+  }
+}
+
+module.exports = {
+  registerUser,
+  generateAndSendOTP,
+  isAuthenticated,
+};
