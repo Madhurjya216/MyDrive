@@ -15,6 +15,14 @@ require("./config/passport");
 
 const app = express();
 
+// Check if we're in production
+const isProduction = process.env.NODE_ENV === "production";
+
+// CRITICAL: Trust proxy ONLY in production
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+
 // Enable gzip compression
 app.use(compression());
 
@@ -44,7 +52,7 @@ mongoose
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// CRITICAL: Session configuration - FOR connect-mongo v3
+// CRITICAL: Session configuration - Works for BOTH localhost and production
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
@@ -54,16 +62,20 @@ app.use(
       mongoUrl: process.env.MONGO_URI,
       ttl: 2 * 24 * 60 * 60, // 2 days
       autoRemove: "native",
+      touchAfter: 24 * 3600,
     }),
     cookie: {
-      maxAge: 2 * 24 * 60 * 60 * 1000,
+      maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      // FIXED: Secure cookies only in production (HTTPS)
+      secure: isProduction,
+      // FIXED: Different sameSite for localhost vs production
+      sameSite: isProduction ? "none" : "lax",
     },
+    // FIXED: Proxy only in production
+    proxy: isProduction,
   })
 );
-
 
 // CRITICAL: Passport initialization MUST come after session
 app.use(passport.initialize());
@@ -74,7 +86,6 @@ app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   console.log("Authenticated:", req.isAuthenticated());
   console.log("User:", req.user ? req.user.email : "Not logged in");
-  console.log("Session ID:", req.sessionID);
   console.log("---");
   next();
 });
@@ -98,4 +109,10 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Environment: ${isProduction ? "production" : "development"}`);
+  console.log(
+    `Secure cookies: ${isProduction ? "enabled (HTTPS)" : "disabled (HTTP)"}`
+  );
+  console.log(`Session secret configured: ${!!process.env.SESSION_SECRET}`);
+  console.log(`MongoDB URI configured: ${!!process.env.MONGO_URI}`);
 });
